@@ -142,28 +142,6 @@ namespace Microsoft.Azure.CosmosRepository
 
             Items.TryRemove(item!.Id, out _);
         }
-        /// <inheritdoc/>
-        public ValueTask<bool> ExistAsync(string id, string partitionKeyValue = null,
-            CancellationToken cancellationToken = default)
-        {
-            return ExistAsync(id, new PartitionKey(partitionKeyValue ?? id), cancellationToken);
-        }
-        /// <inheritdoc/>
-        public async ValueTask<bool> ExistAsync(string id, PartitionKey partitionKey,
-            CancellationToken cancellationToken = default)
-        {
-            TItem item = await GetAsync(id, partitionKey, cancellationToken);
-            return item != null;
-        }
-
-        /// <inheritdoc/>
-        public async ValueTask<bool> ExistAsync(Expression<Func<TItem, bool>> predicate,
-            CancellationToken cancellationToken = default)
-        {
-            await Task.CompletedTask;
-            return Items.Values.Where(predicate.Compose(
-                item => item.Type == typeof(TItem).Name, Expression.AndAlso).Compile()).Any();
-        }
 
         /// <inheritdoc/>
         public async ValueTask<int> CountAsync(Expression<Func<TItem, bool>> predicate,
@@ -173,7 +151,6 @@ namespace Microsoft.Azure.CosmosRepository
              return Items.Values.Where(predicate.Compose(
                 item => item.Type == typeof(TItem).Name, Expression.AndAlso).Compile()).Count();
         }
-
 
         private void NotFound() => throw new CosmosException(string.Empty, HttpStatusCode.NotFound, 0, string.Empty, 0);
         private void Conflict() => throw new CosmosException(string.Empty, HttpStatusCode.Conflict, 0, string.Empty, 0);
