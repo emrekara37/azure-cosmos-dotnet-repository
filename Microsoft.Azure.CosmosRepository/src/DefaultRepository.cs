@@ -66,7 +66,7 @@ namespace Microsoft.Azure.CosmosRepository
 
             TryLogDebugDetails(_logger, () => $"Read: {JsonConvert.SerializeObject(item)}");
 
-            return item is { Type: { Length: 0 } } || item.Type == typeof(TItem).Name ? item : default;
+            return item is {Type: {Length: 0}} || item.Type == typeof(TItem).Name ? item : default;
         }
 
         /// <inheritdoc/>
@@ -134,7 +134,8 @@ namespace Microsoft.Azure.CosmosRepository
                 await _containerProvider.GetContainerAsync().ConfigureAwait(false);
 
             ItemResponse<TItem> response =
-                await container.CreateItemAsync(value, new PartitionKey(value.PartitionKey), cancellationToken: cancellationToken)
+                await container.CreateItemAsync(value, new PartitionKey(value.PartitionKey),
+                        cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 
             TryLogDebugDetails(_logger, () => $"Created: {JsonConvert.SerializeObject(value)}");
@@ -165,7 +166,8 @@ namespace Microsoft.Azure.CosmosRepository
             Container container = await _containerProvider.GetContainerAsync().ConfigureAwait(false);
 
             ItemResponse<TItem> response =
-                await container.UpsertItemAsync<TItem>(value, new PartitionKey(value.PartitionKey), options, cancellationToken)
+                await container.UpsertItemAsync<TItem>(value, new PartitionKey(value.PartitionKey), options,
+                        cancellationToken)
                     .ConfigureAwait(false);
 
             TryLogDebugDetails(_logger, () => $"Updated: {JsonConvert.SerializeObject(value)}");
@@ -206,6 +208,46 @@ namespace Microsoft.Azure.CosmosRepository
             TryLogDebugDetails(_logger, () => $"Deleted: {id}");
         }
 
+        public ValueTask<bool> ExistAsync(string id, string partitionKeyValue = null,
+            CancellationToken cancellationToken = default)
+        {
+            return ExistAsync(id, new PartitionKey(partitionKeyValue ?? id), cancellationToken);
+        }
+
+        public async ValueTask<bool> ExistAsync(string id, PartitionKey partitionKey,
+            CancellationToken cancellationToken = default)
+        {
+            TItem item = await GetAsync(id, partitionKey, cancellationToken);
+            return item != null;
+        }
+
+        public async ValueTask<bool> ExistAsync(Expression<Func<TItem, bool>> predicate,
+            CancellationToken cancellationToken = default)
+        {
+            Container container = await _containerProvider.GetContainerAsync().ConfigureAwait(false);
+
+            IQueryable<TItem> query =
+                container.GetItemLinqQueryable<TItem>()
+                    .Where(predicate.Compose(
+                        item => !item.Type.IsDefined() || item.Type == typeof(TItem).Name, Expression.AndAlso));
+            using FeedIterator<TItem> iterator = query.ToFeedIterator();
+            return iterator.HasMoreResults;
+        }
+
+        public async ValueTask<int> CountAsync(Expression<Func<TItem, bool>> predicate,
+            CancellationToken cancellationToken = default)
+        {
+            Container container = await _containerProvider.GetContainerAsync().ConfigureAwait(false);
+
+            IQueryable<TItem> query =
+                container.GetItemLinqQueryable<TItem>()
+                    .Where(predicate.Compose(
+                        item => !item.Type.IsDefined() || item.Type == typeof(TItem).Name, Expression.AndAlso));
+
+            int count = await query.CountAsync(cancellationToken);
+            return count;
+        }
+
         static async Task<IEnumerable<TItem>> IterateQueryInternalAsync(
             Container container,
             QueryDefinition queryDefinition,
@@ -216,7 +258,8 @@ namespace Microsoft.Azure.CosmosRepository
             List<TItem> results = new();
             while (queryIterator.HasMoreResults)
             {
-                FeedResponse<TItem> response = await queryIterator.ReadNextAsync(cancellationToken).ConfigureAwait(false);
+                FeedResponse<TItem> response =
+                    await queryIterator.ReadNextAsync(cancellationToken).ConfigureAwait(false);
                 results.AddRange(response.Resource);
             }
 

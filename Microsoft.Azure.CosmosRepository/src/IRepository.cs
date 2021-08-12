@@ -160,5 +160,46 @@ namespace Microsoft.Azure.CosmosRepository
             string id,
             PartitionKey partitionKey,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// <see langword="true" /> if the source sequence contains any items; otherwise, <see langword="false" />.
+        /// </summary>
+        /// <param name="id">The string identifier.</param>
+        /// <param name="partitionKeyValue">The partition key value if different than the <see cref="IItem.Id"/>.</param>
+        /// <param name="cancellationToken">The cancellation token to use when making asynchronous operations.</param>
+        /// <returns></returns>
+        ValueTask<bool> ExistAsync(string id, string partitionKeyValue = null,
+            CancellationToken cancellationToken = default);
+
+
+        /// <summary>
+        /// <see langword="true" /> if the source sequence contains any items; otherwise, <see langword="false" />.
+        /// </summary>
+        /// <param name="id">The string identifier.</param>
+        /// <param name="partitionKey">The <see cref="PartitionKey"/> value if different than the <see cref="IItem.Id"/>.</param>
+        /// <param name="cancellationToken">The cancellation token to use when making asynchronous operations.</param>
+        /// <returns>
+        /// <see langword="true" /> if the source sequence contains any items; otherwise, <see langword="false" />.</returns>
+        ValueTask<bool> ExistAsync(string id, PartitionKey partitionKey,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// <see langword="true" /> if the source sequence contains any items; otherwise, <see langword="false" />.
+        /// </summary>
+        /// <param name="predicate">The expression used for evaluating a matching item.</param>
+        /// <param name="cancellationToken">The cancellation token to use when making asynchronous operations.</param>
+        /// <returns>
+        /// <see langword="true" /> if the source sequence contains any items; otherwise, <see langword="false" />.</returns>
+        ValueTask<bool> ExistAsync(Expression<Func<TItem, bool>> predicate,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Returns the number of elements in a sequence.
+        /// </summary>
+        /// <param name="predicate">The expression used for evaluating a matching item.</param>
+        /// <param name="cancellationToken">The cancellation token to use when making asynchronous operations.</param>
+        /// <returns>The number of elements in a sequence.</returns>
+        ValueTask<int> CountAsync(Expression<Func<TItem, bool>> predicate,
+            CancellationToken cancellationToken = default);
     }
 }

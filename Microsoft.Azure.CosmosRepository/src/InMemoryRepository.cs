@@ -17,14 +17,16 @@ namespace Microsoft.Azure.CosmosRepository
     /// <inheritdoc/>
     public class InMemoryRepository<TItem> : IRepository<TItem> where TItem : class, IItem
     {
-        internal ConcurrentDictionary<string,TItem> Items { get; } = new();
+        internal ConcurrentDictionary<string, TItem> Items { get; } = new();
 
         /// <inheritdoc/>
-        public ValueTask<TItem> GetAsync(string id, string partitionKeyValue = null, CancellationToken cancellationToken = default)
+        public ValueTask<TItem> GetAsync(string id, string partitionKeyValue = null,
+            CancellationToken cancellationToken = default)
             => GetAsync(id, new PartitionKey(partitionKeyValue ?? id), cancellationToken);
 
         /// <inheritdoc/>
-        public async ValueTask<TItem> GetAsync(string id, PartitionKey partitionKey, CancellationToken cancellationToken = default)
+        public async ValueTask<TItem> GetAsync(string id, PartitionKey partitionKey,
+            CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
 
@@ -33,32 +35,36 @@ namespace Microsoft.Azure.CosmosRepository
                 partitionKey = new PartitionKey(id);
             }
 
-            TItem item = Items.Values.FirstOrDefault(i => i.Id == id && new PartitionKey(i.PartitionKey) == partitionKey);
+            TItem item =
+                Items.Values.FirstOrDefault(i => i.Id == id && new PartitionKey(i.PartitionKey) == partitionKey);
 
             if (item is null)
             {
                 NotFound();
             }
 
-            return item is { Type: { Length: 0 } } || item.Type == typeof(TItem).Name ? item : default;
+            return item is {Type: {Length: 0}} || item.Type == typeof(TItem).Name ? item : default;
         }
 
         /// <inheritdoc/>
-        public async ValueTask<IEnumerable<TItem>> GetAsync(Expression<Func<TItem, bool>> predicate, CancellationToken cancellationToken = default)
+        public async ValueTask<IEnumerable<TItem>> GetAsync(Expression<Func<TItem, bool>> predicate,
+            CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
             return Items.Values.Where(predicate.Compose(
-                item =>  item.Type == typeof(TItem).Name, Expression.AndAlso).Compile());
+                item => item.Type == typeof(TItem).Name, Expression.AndAlso).Compile());
         }
 
         /// <inheritdoc/>
-        public ValueTask<IEnumerable<TItem>> GetByQueryAsync(string query, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<TItem>> GetByQueryAsync(string query,
+            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc/>
-        public ValueTask<IEnumerable<TItem>> GetByQueryAsync(QueryDefinition queryDefinition, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<TItem>> GetByQueryAsync(QueryDefinition queryDefinition,
+            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -83,7 +89,8 @@ namespace Microsoft.Azure.CosmosRepository
         }
 
         /// <inheritdoc/>
-        public async ValueTask<IEnumerable<TItem>> CreateAsync(IEnumerable<TItem> values, CancellationToken cancellationToken = default)
+        public async ValueTask<IEnumerable<TItem>> CreateAsync(IEnumerable<TItem> values,
+            CancellationToken cancellationToken = default)
         {
             IEnumerable<TItem> enumerable = values.ToList();
 
@@ -115,7 +122,8 @@ namespace Microsoft.Azure.CosmosRepository
             => DeleteAsync(id, new PartitionKey(partitionKeyValue), cancellationToken);
 
         /// <inheritdoc/>
-        public async ValueTask DeleteAsync(string id, PartitionKey partitionKey, CancellationToken cancellationToken = default)
+        public async ValueTask DeleteAsync(string id, PartitionKey partitionKey,
+            CancellationToken cancellationToken = default)
         {
             await Task.CompletedTask;
 
@@ -124,7 +132,8 @@ namespace Microsoft.Azure.CosmosRepository
                 partitionKey = new PartitionKey(id);
             }
 
-            TItem item = Items.Values.FirstOrDefault(i => i.Id == id && new PartitionKey(i.PartitionKey) == partitionKey);
+            TItem item =
+                Items.Values.FirstOrDefault(i => i.Id == id && new PartitionKey(i.PartitionKey) == partitionKey);
 
             if (item is null)
             {
@@ -133,6 +142,38 @@ namespace Microsoft.Azure.CosmosRepository
 
             Items.TryRemove(item!.Id, out _);
         }
+        /// <inheritdoc/>
+        public ValueTask<bool> ExistAsync(string id, string partitionKeyValue = null,
+            CancellationToken cancellationToken = default)
+        {
+            return ExistAsync(id, new PartitionKey(partitionKeyValue ?? id), cancellationToken);
+        }
+        /// <inheritdoc/>
+        public async ValueTask<bool> ExistAsync(string id, PartitionKey partitionKey,
+            CancellationToken cancellationToken = default)
+        {
+            TItem item = await GetAsync(id, partitionKey, cancellationToken);
+            return item != null;
+        }
+
+        /// <inheritdoc/>
+        public async ValueTask<bool> ExistAsync(Expression<Func<TItem, bool>> predicate,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            return Items.Values.Where(predicate.Compose(
+                item => item.Type == typeof(TItem).Name, Expression.AndAlso).Compile()).Any();
+        }
+
+        /// <inheritdoc/>
+        public async ValueTask<int> CountAsync(Expression<Func<TItem, bool>> predicate,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+             return Items.Values.Where(predicate.Compose(
+                item => item.Type == typeof(TItem).Name, Expression.AndAlso).Compile()).Count();
+        }
+
 
         private void NotFound() => throw new CosmosException(string.Empty, HttpStatusCode.NotFound, 0, string.Empty, 0);
         private void Conflict() => throw new CosmosException(string.Empty, HttpStatusCode.Conflict, 0, string.Empty, 0);
